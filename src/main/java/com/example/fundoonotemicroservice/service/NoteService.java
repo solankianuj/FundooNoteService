@@ -2,15 +2,20 @@ package com.example.fundoonotemicroservice.service;
 
 import com.example.fundoonotemicroservice.dto.FundooNoteDTO;
 import com.example.fundoonotemicroservice.exception.NoteNotFound;
+import com.example.fundoonotemicroservice.model.LabelModel;
 import com.example.fundoonotemicroservice.model.NotesModel;
+import com.example.fundoonotemicroservice.repository.LabelRepository;
 import com.example.fundoonotemicroservice.repository.NoteRepository;
 import com.example.fundoonotemicroservice.service.mailService.MailServices;
 import com.example.fundoonotemicroservice.util.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -20,6 +25,9 @@ public class NoteService implements  INoteService{
 
     @Autowired
     NoteRepository noteRepository;
+
+    @Autowired
+    LabelRepository labelRepository;
 
     @Autowired
     MailServices mailServices;
@@ -223,6 +231,62 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400, "User Not Found !");
     }
 
+    @Override
+    public Response addLabel(String token, long noteId, long labelId) {
+        if (isUserPresent(token) && isUserActive(token)){
+            Optional<NotesModel> notesModel = noteRepository.findById(noteId);
+            if (notesModel.isPresent()){
+                Optional<LabelModel> labelModel=labelRepository.findById(labelId);
+                notesModel.get().getLabelList().add(labelModel.get());
+                noteRepository.save(notesModel.get());
+                return new Response("adding label",200,labelModel.get());
+            }
+            throw new NoteNotFound(400, "Note Not Found !");
+        }
+        throw new NoteNotFound(400, "User Not Found !");
+    }
+
+    @Override
+    public Response addCollaborator( String collbEmailId, long noteId) {
+        if (isCollaboraterPresent(collbEmailId)){
+            Optional<NotesModel> notesModel = noteRepository.findById(noteId);
+            if (notesModel.isPresent()){
+                notesModel.get().getCollaborator().add(collbEmailId);
+                noteRepository.save(notesModel.get());
+                return new Response(" collaborator added in note",200,notesModel.get());
+            }
+            throw new NoteNotFound(400, "Note Not Found !");
+        }
+        throw new NoteNotFound(400, "User Not Found !");
+    }
+
+    @Override
+    public Response setReminder(String token, long noteId, LocalDateTime dateTime) {
+        if (isUserPresent(token) && isUserActive(token)) {
+            Optional<NotesModel> notesModel = noteRepository.findById(noteId);
+            if (notesModel.isPresent()) {
+                notesModel.get().setReminderTime(dateTime);
+                noteRepository.save(notesModel.get());
+                return new Response("reminder set at "+dateTime,200,notesModel.get());
+            }
+            throw new NoteNotFound(400, "Note Not Found !");
+        }
+        throw new NoteNotFound(400, "User Not Found !");
+    }
+
+    @Override
+    public Response showReminder(long noteId, LocalDateTime dateTime) {
+        Optional<NotesModel> notesModel = noteRepository.findById(noteId);
+        if (notesModel.isPresent()) {
+            if (notesModel.get().getReminderTime()==(dateTime)){
+                mailServices.send(notesModel.get().getEmailId(),"Reminder"," Reminder of Note "+notesModel.get());
+                return new Response("Reminder Sent Successfully", 200, mailServices);
+            }
+            throw new NoteNotFound(400, "Time Not Match !");
+        }
+        throw new NoteNotFound(400, "Note Not Found !");
+    }
+
     public Boolean isUserPresent(String token){
         return restTemplate.getForObject("http://localhost:7071/user/validatingUser/" + token, Boolean.class);
     }
@@ -230,6 +294,10 @@ public class NoteService implements  INoteService{
     public Boolean isUserActive(String token){
         return restTemplate.getForObject("http://localhost:7071/user/activateUser/" + token, Boolean.class);
     }
+    public Boolean isCollaboraterPresent(String collbEmailId){
+        return restTemplate.getForObject("http://localhost:7071/user/emailVerify/" + collbEmailId, Boolean.class);
+    }
+
 
 
 }

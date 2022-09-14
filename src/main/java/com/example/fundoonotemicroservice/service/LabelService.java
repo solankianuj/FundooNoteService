@@ -5,6 +5,7 @@ import com.example.fundoonotemicroservice.exception.NoteNotFound;
 import com.example.fundoonotemicroservice.model.LabelModel;
 import com.example.fundoonotemicroservice.model.NotesModel;
 import com.example.fundoonotemicroservice.repository.LabelRepository;
+import com.example.fundoonotemicroservice.repository.NoteRepository;
 import com.example.fundoonotemicroservice.util.Response;
 import com.example.fundoonotemicroservice.util.Token;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,16 +21,18 @@ public class LabelService implements ILabelService{
     @Autowired
     LabelRepository labelRepository;
     @Autowired
+    NoteRepository noteRepository;
+    @Autowired
     Token tokenUtil;
 
+    @Autowired
     NoteService noteService;
 
     @Override
-    public Response creatLabel(String token,LabelDTO labelDTO) {
+    public Response creatLabel(String token,long noteId,LabelDTO labelDTO) {
         LabelModel labelModel=new LabelModel(labelDTO);
-        NotesModel notesModel=new NotesModel();
         labelModel.setUserId(tokenUtil.decodeToken(token));
-        labelModel.setNoteId(notesModel.getNoteId());
+        labelModel.setNoteId(noteId);
         labelModel.setRegisterDate(LocalDateTime.now());
         labelRepository.save(labelModel);
 
@@ -37,25 +40,38 @@ public class LabelService implements ILabelService{
     }
 
     @Override
-    public Response readLabel(String token,long noteId, long labelId) {
+    public Response readLabel(String token,long labelId) {
         if (noteService.isUserPresent(token)){
-            if (noteService.noteRepository.findById(noteId).isPresent()){
              Optional<LabelModel> labelModel= labelRepository.findById(labelId);
              return new Response("Fetching Label",200,labelModel);
-            }
-            throw new NoteNotFound(400,"Note Note Found !");
         }
         throw new NoteNotFound(400,"User Note Found !");
-
     }
 
     @Override
     public Response updateLabel(String token, long labelId, LabelDTO labelDTO) {
-        return null;
+        if (noteService.isUserPresent(token)){
+            Optional<LabelModel> labelModel= labelRepository.findById(labelId);
+            if (labelModel.isPresent()) {
+                labelModel.get().setLabelName(labelDTO.getLabelName());
+                labelModel.get().setUpdateDate(LocalDateTime.now());
+                return new Response("Updating Label", 200, labelModel.get());
+            }
+            throw new NoteNotFound(400,"Label Note Found !");
+        }
+        throw new NoteNotFound(400,"User Note Found !");
     }
 
     @Override
     public Response deleteLabel(String token, long labelId) {
-        return null;
+        if (noteService.isUserPresent(token)){
+            Optional<LabelModel> labelModel= labelRepository.findById(labelId);
+            if (labelModel.isPresent()) {
+                labelRepository.delete(labelModel.get());
+                return new Response("Deleting Label", 200, labelModel.get());
+            }
+            throw new NoteNotFound(400,"Label Note Found !");
+        }
+        throw new NoteNotFound(400,"User Note Found !");
     }
 }

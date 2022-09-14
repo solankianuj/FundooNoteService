@@ -3,6 +3,9 @@ package com.example.fundoonotemicroservice.service;
 import com.example.fundoonotemicroservice.dto.FundooNoteDTO;
 import com.example.fundoonotemicroservice.util.Response;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 
 public interface INoteService {
 
@@ -21,4 +24,9 @@ public interface INoteService {
     Response restoreNote(String token,long noteId);
     Response permanentlyDeleteNote(String token,long noteId);
     Response changeColourOfNote(String token,long noteId,String colour);
+    Response addLabel(String token,long noteId,long labelId);
+    Response addCollaborator(String collbEmailId,long noteId);
+    Response setReminder(String token, long noteId, LocalDateTime dateTime);
+
+    Response showReminder(long noteId, LocalDateTime dateTime);
 }

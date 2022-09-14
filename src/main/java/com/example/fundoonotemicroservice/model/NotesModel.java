@@ -1,12 +1,15 @@
 package com.example.fundoonotemicroservice.model;
 
 import com.example.fundoonotemicroservice.dto.FundooNoteDTO;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.persistence.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,6 +22,7 @@ public class NotesModel {
     @Id
     @GenericGenerator(name = "fundooNoteData",strategy = "increment")
     @GeneratedValue(generator = "fundooNoteData")
+    @Column(name = "noteId")
     private Long noteId;
     private String tittle;
     private String description;
@@ -32,6 +36,9 @@ public class NotesModel {
     private String emailId;
     private String colour;
     private LocalDateTime reminderTime;
+    @JsonIgnore()
+    @ManyToMany(cascade = CascadeType.ALL)
+    private List<LabelModel> labelList;
     @ElementCollection
     List<String> collaborator;
 

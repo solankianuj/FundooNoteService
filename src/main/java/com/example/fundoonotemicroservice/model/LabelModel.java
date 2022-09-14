@@ -25,7 +25,8 @@ public class LabelModel {
     private Long noteId;
     private LocalDateTime registerDate;
     private LocalDateTime updateDate;
-//    private List<NotesModel> notes;
+    @ManyToMany(mappedBy = "labelList")
+    private List<NotesModel> notes;
 
 
     public LabelModel(LabelDTO labelDTO) {
