@@ -3,7 +3,6 @@ package com.example.fundoonotemicroservice.service;
 import com.example.fundoonotemicroservice.dto.FundooNoteDTO;
 import com.example.fundoonotemicroservice.util.Response;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 
@@ -28,5 +27,4 @@ public interface INoteService {
     Response addCollaborator(String collbEmailId,long noteId);
     Response setReminder(String token, long noteId, LocalDateTime dateTime);
 
-    Response showReminder(long noteId, LocalDateTime dateTime);
 }

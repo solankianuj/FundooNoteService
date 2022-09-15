@@ -9,17 +9,20 @@ import com.example.fundoonotemicroservice.repository.NoteRepository;
 import com.example.fundoonotemicroservice.service.mailService.MailServices;
 import com.example.fundoonotemicroservice.util.Response;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * purpose-note operation api's logics.
+ * @author anuj solanki
+ * @date 14/09/2022
+ * @version 1.0
+ */
 @Service
 public class NoteService implements  INoteService{
 
@@ -35,6 +38,11 @@ public class NoteService implements  INoteService{
     @Autowired
     RestTemplate restTemplate;
 
+    /**
+     * purpose-method for creating note.
+     * @param fundooNoteDTO
+     * @return note details.
+     */
     @Override
     public Response creatNote(FundooNoteDTO fundooNoteDTO) {
         NotesModel notesModel=new NotesModel(fundooNoteDTO);
@@ -44,6 +52,13 @@ public class NoteService implements  INoteService{
         return new Response("Note added successfully",200,notesModel);
     }
 
+    /**
+     * purpose-method to update note.
+     * @param token
+     * @param noteId
+     * @param fundooNoteDTO
+     * @return
+     */
     @Override
     public Response updateNote(String token,long noteId, FundooNoteDTO fundooNoteDTO) {
         if (isUserPresent(token)){
@@ -62,6 +77,13 @@ public class NoteService implements  INoteService{
         return null;
     }
 
+    /**
+     * purpose-method to read note.
+     * @param token
+     * @param noteId
+     * @return
+     */
+
     @Override
     public Response readNote(String token, long noteId) {
        if (isUserPresent(token)){
@@ -73,6 +95,12 @@ public class NoteService implements  INoteService{
         return null;
     }
 
+    /**
+     * purpose-method to read all note.
+     * @param token
+     * @return
+     */
+
     @Override
     public Response readAllNote(String token) {
         if (isUserPresent(token)){
@@ -81,6 +109,13 @@ public class NoteService implements  INoteService{
         }
         return null;
     }
+
+    /**
+     * purpose-method to move note in trash.
+     * @param token
+     * @param noteId
+     * @return
+     */
 
     @Override
     public Response trashNote(String token, long noteId) {
@@ -99,6 +134,13 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400,"User Not Found !");
     }
 
+    /**
+     * purpose-method to restore note from trash.
+     * @param token
+     * @param noteId
+     * @return
+     */
+
     @Override
     public Response restoreNote(String token, long noteId) {
         if (isUserPresent(token)){
@@ -112,6 +154,12 @@ public class NoteService implements  INoteService{
         }
         throw new NoteNotFound(400,"User Not Found !");
     }
+
+    /**
+     * purpose-method to list all trash note.
+     * @param token
+     * @return
+     */
     @Override
     public Response allTrashNote(String token) {
         if (isUserPresent(token)){
@@ -122,6 +170,12 @@ public class NoteService implements  INoteService{
 
     }
 
+    /**
+     * purpose-method to pin note.
+     * @param token
+     * @param noteId
+     * @return
+     */
     @Override
     public Response pinNote(String token, long noteId) {
         if (isUserPresent(token)){
@@ -139,6 +193,13 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400,"User Not Found !");
     }
 
+    /**
+     * purpose-method to unpin note.
+     * @param token
+     * @param noteId
+     * @return
+     */
+
     @Override
     public Response unPinNote(String token, long noteId) {
         if (isUserPresent(token)) {
@@ -153,6 +214,12 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400,"User Not Found !");
     }
 
+    /**
+     * purpose-method to list all pined note.
+     * @param token
+     * @return
+     */
+
     @Override
     public Response allPinNote(String token) {
         if (isUserPresent(token)){
@@ -162,6 +229,12 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400,"User Not Found !");
     }
 
+    /**
+     * purpose-method to archive note.
+     * @param token
+     * @param noteId
+     * @return
+     */
     @Override
     public Response archiveNote(String token, long noteId) {
         if (isUserPresent(token)){
@@ -179,6 +252,12 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400,"User Not Found !");
     }
 
+    /**
+     * purpose-method to unarchive note.
+     * @param token
+     * @param noteId
+     * @return
+     */
     @Override
     public Response unArchiveNote(String token, long noteId) {
         if (isUserPresent(token)) {
@@ -193,6 +272,11 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400,"User Not Found !");
     }
 
+    /**
+     * purpose-method to list al archive notes.
+     * @param token
+     * @return
+     */
     @Override
     public Response allArchiveNote(String token) {
         if (isUserPresent(token)){
@@ -202,8 +286,12 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400,"User Not Found !");
     }
 
-
-
+    /**
+     * purpose-method to delete note from database.
+     * @param token
+     * @param noteId
+     * @return
+     */
     @Override
     public Response permanentlyDeleteNote(String token, long noteId) {
         if (isUserPresent(token)) {
@@ -217,6 +305,13 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400, "User Not Found !");
     }
 
+    /**
+     * purpose-method to change colour of note.
+     * @param token
+     * @param noteId
+     * @param colour
+     * @return
+     */
     @Override
     public Response changeColourOfNote(String token, long noteId,String colour) {
         if (isUserPresent(token) && isUserActive(token)) {
@@ -231,6 +326,13 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400, "User Not Found !");
     }
 
+    /**
+     * purpose-method to add label in note.
+     * @param token
+     * @param noteId
+     * @param labelId
+     * @return
+     */
     @Override
     public Response addLabel(String token, long noteId, long labelId) {
         if (isUserPresent(token) && isUserActive(token)){
@@ -246,6 +348,12 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400, "User Not Found !");
     }
 
+    /**
+     * purpose-method to add collaborators in note.
+     * @param collbEmailId
+     * @param noteId
+     * @return
+     */
     @Override
     public Response addCollaborator( String collbEmailId, long noteId) {
         if (isCollaboraterPresent(collbEmailId)){
@@ -260,6 +368,13 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400, "User Not Found !");
     }
 
+    /**
+     * purpose-method to set reminder in note.
+     * @param token
+     * @param noteId
+     * @param dateTime
+     * @return
+     */
     @Override
     public Response setReminder(String token, long noteId, LocalDateTime dateTime) {
         if (isUserPresent(token) && isUserActive(token)) {
@@ -274,26 +389,29 @@ public class NoteService implements  INoteService{
         throw new NoteNotFound(400, "User Not Found !");
     }
 
-    @Override
-    public Response showReminder(long noteId, LocalDateTime dateTime) {
-        Optional<NotesModel> notesModel = noteRepository.findById(noteId);
-        if (notesModel.isPresent()) {
-            if (notesModel.get().getReminderTime()==(dateTime)){
-                mailServices.send(notesModel.get().getEmailId(),"Reminder"," Reminder of Note "+notesModel.get());
-                return new Response("Reminder Sent Successfully", 200, mailServices);
-            }
-            throw new NoteNotFound(400, "Time Not Match !");
-        }
-        throw new NoteNotFound(400, "Note Not Found !");
-    }
-
+    /**
+     * purpose-method to check user present in database.
+     * @param token
+     * @return
+     */
     public Boolean isUserPresent(String token){
         return restTemplate.getForObject("http://localhost:7071/user/validatingUser/" + token, Boolean.class);
     }
 
+    /**
+     * purpose-method to check user is active or note.
+     * @param token
+     * @return
+     */
     public Boolean isUserActive(String token){
         return restTemplate.getForObject("http://localhost:7071/user/activateUser/" + token, Boolean.class);
     }
+
+    /**
+     * purpose-method to check user email is present or note in database.
+     * @param collbEmailId
+     * @return
+     */
     public Boolean isCollaboraterPresent(String collbEmailId){
         return restTemplate.getForObject("http://localhost:7071/user/emailVerify/" + collbEmailId, Boolean.class);
     }

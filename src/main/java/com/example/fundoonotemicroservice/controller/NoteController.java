@@ -6,7 +6,6 @@ import com.example.fundoonotemicroservice.util.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -240,10 +239,5 @@ public class NoteController {
         Response response = noteService.setReminder(token, noteId, dateTime);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-    @GetMapping("/getReminder")
-    @Scheduled(fixedDelay = 60)
-    public ResponseEntity<Response> getReminder (@RequestParam long noteId, @RequestParam(name = "dateTime")   LocalDateTime dateTime) {
-        Response response = noteService.showReminder( noteId, dateTime);
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
+
 }
