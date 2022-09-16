@@ -1,6 +1,7 @@
 package com.example.fundoonotemicroservice.model;
 
 import com.example.fundoonotemicroservice.dto.LabelDTO;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,7 @@ public class LabelModel {
     private Long noteId;
     private LocalDateTime registerDate;
     private LocalDateTime updateDate;
+    @JsonIgnore()
     @ManyToMany(mappedBy = "labelList")
     private List<NotesModel> notes;
 

@@ -4,11 +4,13 @@ import com.example.fundoonotemicroservice.dto.FundooNoteDTO;
 import com.example.fundoonotemicroservice.service.NoteService;
 import com.example.fundoonotemicroservice.util.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -31,8 +33,8 @@ public class NoteController {
      * @return note details.
      */
     @PostMapping("/createNote")
-    public ResponseEntity<Response> addNote(@Valid @RequestBody FundooNoteDTO noteDTO) {
-        Response response = noteService.creatNote(noteDTO);
+    public ResponseEntity<Response> addNote(@RequestHeader String token,@Valid @RequestBody FundooNoteDTO noteDTO) {
+        Response response = noteService.creatNote(token, noteDTO);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -222,8 +224,8 @@ public class NoteController {
      * @return note details.
      */
     @PutMapping("/addCollaborator")
-    public ResponseEntity<Response> addCollaborator(@RequestParam String collabEmailId,@RequestParam long noteId) {
-        Response response = noteService.addCollaborator(collabEmailId,noteId);
+    public ResponseEntity<Response> addCollaborator(@RequestHeader String token,@RequestParam String collabEmailId,@RequestParam long noteId) {
+        Response response = noteService.addCollaborator(token,collabEmailId,noteId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -234,8 +236,8 @@ public class NoteController {
      * @param dateTime
      * @return reminding mail.
      */
-    @PutMapping("/setReminder")
-    public ResponseEntity<Response> setReminder (@RequestHeader String token, @RequestParam long noteId, @RequestParam(name = "dateTime")   LocalDateTime dateTime) {
+    @PostMapping("/setReminder")
+    public ResponseEntity<Response> setReminder (@RequestHeader String token, @RequestParam long noteId, @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTime) {
         Response response = noteService.setReminder(token, noteId, dateTime);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

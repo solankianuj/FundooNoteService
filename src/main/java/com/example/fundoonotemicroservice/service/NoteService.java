@@ -8,10 +8,12 @@ import com.example.fundoonotemicroservice.repository.LabelRepository;
 import com.example.fundoonotemicroservice.repository.NoteRepository;
 import com.example.fundoonotemicroservice.service.mailService.MailServices;
 import com.example.fundoonotemicroservice.util.Response;
+import com.example.fundoonotemicroservice.util.Token;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +39,8 @@ public class NoteService implements  INoteService{
 
     @Autowired
     RestTemplate restTemplate;
+    @Autowired
+    Token tokenUtil;
 
     /**
      * purpose-method for creating note.
@@ -44,12 +48,17 @@ public class NoteService implements  INoteService{
      * @return note details.
      */
     @Override
-    public Response creatNote(FundooNoteDTO fundooNoteDTO) {
-        NotesModel notesModel=new NotesModel(fundooNoteDTO);
-        notesModel.setRegisterDate(LocalDateTime.now());
-        noteRepository.save(notesModel);
-        mailServices.send(notesModel.getEmailId(), "Note Registration. ","Note added successfully.\n"+notesModel);
-        return new Response("Note added successfully",200,notesModel);
+    public Response creatNote(String token,FundooNoteDTO fundooNoteDTO) {
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
+            NotesModel notesModel = new NotesModel(fundooNoteDTO);
+            notesModel.setRegisterDate(LocalDateTime.now());
+            notesModel.setUserId(userId);
+            noteRepository.save(notesModel);
+            mailServices.send(notesModel.getEmailId(), "Note Registration. ", "Note added successfully.\n" + notesModel);
+            return new Response("Note added successfully", 200, notesModel);
+        }
+        throw  new NoteNotFound(400,"user not found");
     }
 
     /**
@@ -61,20 +70,24 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response updateNote(String token,long noteId, FundooNoteDTO fundooNoteDTO) {
-        if (isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel=noteRepository.findById(noteId);
             if (notesModel.isPresent()){
-                notesModel.get().setTittle(fundooNoteDTO.getTittle());
-                notesModel.get().setDescription(fundooNoteDTO.getDescription());
-                notesModel.get().setEmailId(fundooNoteDTO.getEmailId());
-                notesModel.get().setColour(fundooNoteDTO.getColour());
-                notesModel.get().setUpdateDate(LocalDateTime.now());
-                noteRepository.save(notesModel.get());
-                return new Response("Note updated successfully",200,notesModel.get());
+                if (notesModel.get().getUserId()==userId) {
+                    notesModel.get().setTittle(fundooNoteDTO.getTittle());
+                    notesModel.get().setDescription(fundooNoteDTO.getDescription());
+                    notesModel.get().setEmailId(fundooNoteDTO.getEmailId());
+                    notesModel.get().setColour(fundooNoteDTO.getColour());
+                    notesModel.get().setUpdateDate(LocalDateTime.now());
+                    noteRepository.save(notesModel.get());
+                    return new Response("Note updated successfully", 200, notesModel.get());
+                }
+                throw  new NoteNotFound(400,"Note is not accessible.");
             }
-            return null;
+            throw  new NoteNotFound(400,"Note not found.");
         }
-        return null;
+        throw  new NoteNotFound(400,"user not found");
     }
 
     /**
@@ -86,13 +99,18 @@ public class NoteService implements  INoteService{
 
     @Override
     public Response readNote(String token, long noteId) {
-       if (isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+       if (isUserPresent(userId)){
            Optional<NotesModel> notesModel=noteRepository.findById(noteId);
            if (notesModel.isPresent()){
+               if (notesModel.get().getUserId()==userId){
                return new Response("Fetching Note Details By NoteId",200,notesModel.get());
+               }
+               throw  new NoteNotFound(400,"Note is not accessible.");
            }
+           throw  new NoteNotFound(400,"Note not found.");
        }
-        return null;
+        throw  new NoteNotFound(400,"user not found");
     }
 
     /**
@@ -103,11 +121,12 @@ public class NoteService implements  INoteService{
 
     @Override
     public Response readAllNote(String token) {
-        if (isUserPresent(token)){
-            List<NotesModel> noteList=noteRepository.findAll();
-            return new Response("Fetching All Note Details",200,noteList);
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
+            List<NotesModel> noteList=noteRepository.findAll().stream().filter(x->x.getUserId()==userId).collect(Collectors.toList());
+            return new Response("Fetching all notes of user",200,noteList);
         }
-        return null;
+        throw  new NoteNotFound(400,"user not found");
     }
 
     /**
@@ -119,15 +138,19 @@ public class NoteService implements  INoteService{
 
     @Override
     public Response trashNote(String token, long noteId) {
-        if (isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel=noteRepository.findById(noteId);
             if (notesModel.isPresent()){
-              if (notesModel.get().isPin()==false){
-                  notesModel.get().setTrash(true);
-                  noteRepository.save(notesModel.get());
-                  return new Response("Note moving into trash ",200,notesModel.get());
-              }
-              throw  new NoteNotFound(400,"Note is Pined,Made it unpin first");
+                if (notesModel.get().getUserId()==userId) {
+                    if (notesModel.get().isPin() == false) {
+                        notesModel.get().setTrash(true);
+                        noteRepository.save(notesModel.get());
+                        return new Response("Note moving into trash ", 200, notesModel.get());
+                    }
+                    throw  new NoteNotFound(400,"Note is Pined,Made it unpin first");
+                }
+                throw  new NoteNotFound(400,"Note is not accessible.");
             }
             throw  new NoteNotFound(400,"Note Not Found !");
         }
@@ -143,14 +166,21 @@ public class NoteService implements  INoteService{
 
     @Override
     public Response restoreNote(String token, long noteId) {
-        if (isUserPresent(token)){
-            Optional<NotesModel> notesModel=noteRepository.findById(noteId);
-            if (notesModel.isPresent() && notesModel.get().isTrash()==true){
-                notesModel.get().setTrash(false);
-                noteRepository.save(notesModel.get());
-                return new Response("Restoring Note.",200,notesModel.get());
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
+            Optional<NotesModel> notesModel = noteRepository.findById(noteId);
+            if (notesModel.get().getUserId() == userId) {
+                if (notesModel.isPresent()) {
+                    if (notesModel.get().isTrash() == true) {
+                        notesModel.get().setTrash(false);
+                        noteRepository.save(notesModel.get());
+                        return new Response("Restoring Note.", 200, notesModel.get());
+                    }
+                    throw new NoteNotFound(400, "Note is Note In Trash !");
+                }
+                throw new NoteNotFound(400, "Note not found !");
             }
-            throw new NoteNotFound(400,"Note is Note In Trash !");
+            throw new NoteNotFound(400, "Note is not accessible !");
         }
         throw new NoteNotFound(400,"User Not Found !");
     }
@@ -162,8 +192,9 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response allTrashNote(String token) {
-        if (isUserPresent(token)){
-          List<NotesModel> trashList=noteRepository.findAll().stream().filter(x-> x.isTrash()==true).collect(Collectors.toList());
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
+          List<NotesModel> trashList=noteRepository.findAll().stream().filter(x-> x.isTrash()==true && x.getUserId()==userId).collect(Collectors.toList());
             return new Response("Fetching All trash note",200,trashList);
         }
         throw new NoteNotFound(400,"User Not Found !");
@@ -178,15 +209,19 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response pinNote(String token, long noteId) {
-        if (isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel=noteRepository.findById(noteId);
-            if (notesModel.isPresent()){
-                if (notesModel.get().isArchive()==false){
-                    notesModel.get().setPin(true);
-                    noteRepository.save(notesModel.get());
-                    return new Response("Pined Note  ",200,notesModel.get());
+            if (notesModel.isPresent()) {
+                if (notesModel.get().getUserId() == userId) {
+                    if (notesModel.get().isArchive() == false) {
+                        notesModel.get().setPin(true);
+                        noteRepository.save(notesModel.get());
+                        return new Response("Pined Note  ", 200, notesModel.get());
+                    }
+                    throw new NoteNotFound(400, "Note is archive, unarchive it first.");
                 }
-                throw  new NoteNotFound(400,"Note is archive, unarchive it first.");
+                throw  new NoteNotFound(400,"Note is not accessible!");
             }
             throw  new NoteNotFound(400,"Note Not Found !");
         }
@@ -202,12 +237,19 @@ public class NoteService implements  INoteService{
 
     @Override
     public Response unPinNote(String token, long noteId) {
-        if (isUserPresent(token)) {
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel = noteRepository.findById(noteId);
-            if (notesModel.isPresent() && notesModel.get().isPin()==true) {
-                notesModel.get().setPin(false);
-                noteRepository.save(notesModel.get());
-                return new Response("Unpin Note",200,notesModel.get());
+            if (notesModel.isPresent()) {
+                if (notesModel.get().getUserId() == userId) {
+                    if (notesModel.get().isPin() == true) {
+                        notesModel.get().setPin(false);
+                        noteRepository.save(notesModel.get());
+                        return new Response("Unpin Note", 200, notesModel.get());
+                    }
+                    throw  new NoteNotFound(400,"Note is note pin !");
+                }
+                throw  new NoteNotFound(400,"Note is note accessible !");
             }
             throw  new NoteNotFound(400,"Note Not Found !");
         }
@@ -222,8 +264,9 @@ public class NoteService implements  INoteService{
 
     @Override
     public Response allPinNote(String token) {
-        if (isUserPresent(token)){
-            List<NotesModel> pinNoteList=noteRepository.findAll().stream().filter(x-> x.isPin()==true && x.isArchive()==false).collect(Collectors.toList());
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
+            List<NotesModel> pinNoteList=noteRepository.findAll().stream().filter(x->x.getUserId()==userId && x.isPin()==true && x.isArchive()==false).collect(Collectors.toList());
             return new Response("Fetching All pin note",200,pinNoteList);
         }
         throw new NoteNotFound(400,"User Not Found !");
@@ -237,15 +280,19 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response archiveNote(String token, long noteId) {
-        if (isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel=noteRepository.findById(noteId);
             if (notesModel.isPresent()){
-                if (notesModel.get().isPin()==false){
-                    notesModel.get().setArchive(true);
-                    noteRepository.save(notesModel.get());
-                    return new Response("Note moving into archive ",200,notesModel.get());
+                if (notesModel.get().getUserId()==userId) {
+                    if (notesModel.get().isPin() == false) {
+                        notesModel.get().setArchive(true);
+                        noteRepository.save(notesModel.get());
+                        return new Response("Note moving into archive ", 200, notesModel.get());
+                    }
+                    throw new NoteNotFound(400, "Note is pined, unpin it first.");
                 }
-                throw  new NoteNotFound(400,"Note is pined, unpin it first.");
+                throw  new NoteNotFound(400,"Note is not accessible !");
             }
             throw  new NoteNotFound(400,"Note Not Found !");
         }
@@ -260,12 +307,19 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response unArchiveNote(String token, long noteId) {
-        if (isUserPresent(token)) {
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel = noteRepository.findById(noteId);
-            if (notesModel.isPresent() && notesModel.get().isArchive()==true) {
-                notesModel.get().setArchive(false);
-                noteRepository.save(notesModel.get());
-                return new Response("unarchive note",200,notesModel.get());
+            if (notesModel.isPresent()) {
+                if (notesModel.get().getUserId() == userId) {
+                    if (notesModel.get().isArchive() == true) {
+                        notesModel.get().setArchive(false);
+                        noteRepository.save(notesModel.get());
+                        return new Response("unarchive note", 200, notesModel.get());
+                    }
+                    throw  new NoteNotFound(400,"Note is not archive !");
+                }
+                throw  new NoteNotFound(400,"Note is not accessible!");
             }
             throw  new NoteNotFound(400,"Note Not Found !");
         }
@@ -279,8 +333,9 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response allArchiveNote(String token) {
-        if (isUserPresent(token)){
-            List<NotesModel> archiveNoteList=noteRepository.findAll().stream().filter(x-> x.isPin()==false && x.isArchive()==true).collect(Collectors.toList());
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
+            List<NotesModel> archiveNoteList=noteRepository.findAll().stream().filter(x->x.getUserId()==userId && x.isPin()==false && x.isArchive()==true).collect(Collectors.toList());
             return new Response("Fetching All archive note",200,archiveNoteList);
         }
         throw new NoteNotFound(400,"User Not Found !");
@@ -294,11 +349,18 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response permanentlyDeleteNote(String token, long noteId) {
-        if (isUserPresent(token)) {
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel = noteRepository.findById(noteId);
-            if (notesModel.isPresent() && notesModel.get().isTrash() == true) {
-                noteRepository.delete(notesModel.get());
-                return new Response("Permanently deleting note", 200, notesModel.get());
+            if (notesModel.isPresent()) {
+                if (notesModel.get().getUserId()==userId) {
+                    if (notesModel.get().isTrash() == true) {
+                        noteRepository.delete(notesModel.get());
+                        return new Response("Permanently deleting note", 200, notesModel.get());
+                    }
+                    throw new NoteNotFound(400, "Note is not in trash !");
+                }
+                throw new NoteNotFound(400, "Note is not accessible !");
             }
             throw new NoteNotFound(400, "Note Not Found !");
         }
@@ -314,12 +376,16 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response changeColourOfNote(String token, long noteId,String colour) {
-        if (isUserPresent(token) && isUserActive(token)) {
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel = noteRepository.findById(noteId);
-            if (notesModel.isPresent()){
-                notesModel.get().setColour(colour);
-                noteRepository.save(notesModel.get());
-                return new Response("Changing colour of note to "+colour,200,notesModel.get());
+            if (notesModel.isPresent()) {
+                if (notesModel.get().getUserId() == userId) {
+                    notesModel.get().setColour(colour);
+                    noteRepository.save(notesModel.get());
+                    return new Response("Changing colour of note to " + colour, 200, notesModel.get());
+                }
+                throw new NoteNotFound(400, "Note is not accessible !");
             }
             throw new NoteNotFound(400, "Note Not Found !");
         }
@@ -335,13 +401,17 @@ public class NoteService implements  INoteService{
      */
     @Override
     public Response addLabel(String token, long noteId, long labelId) {
-        if (isUserPresent(token) && isUserActive(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId) ) {
             Optional<NotesModel> notesModel = noteRepository.findById(noteId);
-            if (notesModel.isPresent()){
-                Optional<LabelModel> labelModel=labelRepository.findById(labelId);
-                notesModel.get().getLabelList().add(labelModel.get());
-                noteRepository.save(notesModel.get());
-                return new Response("adding label",200,labelModel.get());
+            if (notesModel.isPresent()) {
+                if (notesModel.get().getUserId() == userId) {
+                    Optional<LabelModel> labelModel = labelRepository.findById(labelId);
+                    notesModel.get().getLabelList().add(labelModel.get());
+                    noteRepository.save(notesModel.get());
+                    return new Response("adding label", 200, notesModel.get());
+                }
+                throw new NoteNotFound(400, "Note is not accessible !");
             }
             throw new NoteNotFound(400, "Note Not Found !");
         }
@@ -355,17 +425,28 @@ public class NoteService implements  INoteService{
      * @return
      */
     @Override
-    public Response addCollaborator( String collbEmailId, long noteId) {
-        if (isCollaboraterPresent(collbEmailId)){
+    public Response addCollaborator(String token, String collbEmailId, long noteId) {
+            Long userId= tokenUtil.decodeToken(token);
             Optional<NotesModel> notesModel = noteRepository.findById(noteId);
             if (notesModel.isPresent()){
-                notesModel.get().getCollaborator().add(collbEmailId);
-                noteRepository.save(notesModel.get());
-                return new Response(" collaborator added in note",200,notesModel.get());
+                if (notesModel.get().getUserId()==userId) {
+                    if (isCollaboraterPresent(collbEmailId)){
+                        NotesModel newNote=new NotesModel();
+                        newNote.setTittle(notesModel.get().getTittle());
+                        newNote.setDescription(notesModel.get().getDescription());
+                        newNote.setColour(notesModel.get().getColour());
+                        newNote.setUserId(userId);
+                        newNote.setEmailId(collbEmailId);
+                        notesModel.get().getCollaborator().add(collbEmailId);
+                        noteRepository.save(newNote);
+                        noteRepository.save(notesModel.get());
+                        return new Response("adding collaborator", 200, notesModel.get());
+                    }
+                    throw new NoteNotFound(400, "Collaborator Not Found !");
+                }
+                throw new NoteNotFound(400, "Note is not accessible !");
             }
             throw new NoteNotFound(400, "Note Not Found !");
-        }
-        throw new NoteNotFound(400, "User Not Found !");
     }
 
     /**
@@ -376,8 +457,9 @@ public class NoteService implements  INoteService{
      * @return
      */
     @Override
-    public Response setReminder(String token, long noteId, LocalDateTime dateTime) {
-        if (isUserPresent(token) && isUserActive(token)) {
+    public Response setReminder(String token, long noteId, LocalDate dateTime) {
+        Long userId= tokenUtil.decodeToken(token);
+        if (isUserPresent(userId)) {
             Optional<NotesModel> notesModel = noteRepository.findById(noteId);
             if (notesModel.isPresent()) {
                 notesModel.get().setReminderTime(dateTime);
@@ -391,11 +473,12 @@ public class NoteService implements  INoteService{
 
     /**
      * purpose-method to check user present in database.
-     * @param token
+     *
+     * @param userId
      * @return
      */
-    public Boolean isUserPresent(String token){
-        return restTemplate.getForObject("http://localhost:7071/user/validatingUser/" + token, Boolean.class);
+    public Boolean isUserPresent(Long userId){
+      return   restTemplate.getForObject("http://localhost:7073/user/validatingUser/"+userId,Boolean.class);
     }
 
     /**
@@ -404,7 +487,7 @@ public class NoteService implements  INoteService{
      * @return
      */
     public Boolean isUserActive(String token){
-        return restTemplate.getForObject("http://localhost:7071/user/activateUser/" + token, Boolean.class);
+        return restTemplate.getForObject("http://localhost:7073/user/activateUser/" + token, Boolean.class);
     }
 
     /**
@@ -413,9 +496,7 @@ public class NoteService implements  INoteService{
      * @return
      */
     public Boolean isCollaboraterPresent(String collbEmailId){
-        return restTemplate.getForObject("http://localhost:7071/user/emailVerify/" + collbEmailId, Boolean.class);
+        return restTemplate.getForObject("http://localhost:7073/user/emailVerify/" + collbEmailId, Boolean.class);
     }
-
-
 
 }

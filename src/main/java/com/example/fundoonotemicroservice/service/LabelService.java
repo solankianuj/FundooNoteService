@@ -41,7 +41,8 @@ public class LabelService implements ILabelService{
 
     @Override
     public Response readLabel(String token,long labelId) {
-        if (noteService.isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (noteService.isUserPresent(userId)){
              Optional<LabelModel> labelModel= labelRepository.findById(labelId);
              return new Response("Fetching Label",200,labelModel);
         }
@@ -50,7 +51,8 @@ public class LabelService implements ILabelService{
 
     @Override
     public Response updateLabel(String token, long labelId, LabelDTO labelDTO) {
-        if (noteService.isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (noteService.isUserPresent(userId)){
             Optional<LabelModel> labelModel= labelRepository.findById(labelId);
             if (labelModel.isPresent()) {
                 labelModel.get().setLabelName(labelDTO.getLabelName());
@@ -64,7 +66,8 @@ public class LabelService implements ILabelService{
 
     @Override
     public Response deleteLabel(String token, long labelId) {
-        if (noteService.isUserPresent(token)){
+        Long userId= tokenUtil.decodeToken(token);
+        if (noteService.isUserPresent(userId)){
             Optional<LabelModel> labelModel= labelRepository.findById(labelId);
             if (labelModel.isPresent()) {
                 labelRepository.delete(labelModel.get());

@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.persistence.*;
 import java.time.LocalDate;
@@ -35,9 +34,9 @@ public class NotesModel {
     private long labelId;
     private String emailId;
     private String colour;
-    private LocalDateTime reminderTime;
-    @JsonIgnore()
-    @ManyToMany(cascade = CascadeType.ALL)
+    private LocalDate reminderTime;
+
+    @ManyToMany(cascade = CascadeType.ALL ,fetch = FetchType.LAZY)
     private List<LabelModel> labelList;
     @ElementCollection
     List<String> collaborator;
