@@ -233,12 +233,12 @@ public class NoteController {
      * purpose-api to set reminder for user.
      * @param token
      * @param noteId
-     * @param dateTime
+     * @param date
      * @return reminding mail.
      */
     @PostMapping("/setReminder")
-    public ResponseEntity<Response> setReminder (@RequestHeader String token, @RequestParam long noteId, @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTime) {
-        Response response = noteService.setReminder(token, noteId, dateTime);
+    public ResponseEntity<Response> setReminder (@RequestHeader String token, @RequestParam long noteId, @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        Response response = noteService.setReminder(token, noteId, date);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

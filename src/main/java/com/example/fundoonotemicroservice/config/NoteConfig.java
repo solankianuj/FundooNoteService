@@ -14,9 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * purpose-creating rest template bean.
@@ -31,6 +29,7 @@ public class NoteConfig {
     @Autowired
     MailServices mailServices;
     @Bean
+    @LoadBalanced
     public RestTemplate getRestTemplate(){
         return new RestTemplate();
     }
@@ -43,8 +42,8 @@ public class NoteConfig {
 //        for (NotesModel notesModel:notesModelList
 //             ) {
 //            if (notesModel.getReminderTime().equals(LocalDate.now())) {
-//                System.out.println(notesModel.getReminderTime());
-////                mailServices.send(notesModel.getEmailId(), "Reminder","you have reminder today for this note"+notesModel);
+//                System.out.println("Email sent successfully ...");
+//                mailServices.send(notesModel.getEmailId(), "Reminder ...","You have reminder today for the NoteId:"+notesModel.getNoteId());
 //            }
 //        }
 //
